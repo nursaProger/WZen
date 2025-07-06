@@ -39,8 +39,11 @@ const scheduleRoomDeletion = (roomId) => {
 };
 
 module.exports = (req, res) => {
+  console.log('📨 Получен запрос:', req.method, req.body);
+  
   if (req.method === 'POST') {
     const { action, roomId, username, data } = req.body;
+    console.log('🔍 Обрабатываем действие:', action, 'для комнаты:', roomId, 'пользователь:', username);
 
     switch (action) {
       case 'join-room':

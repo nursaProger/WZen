@@ -61,6 +61,7 @@ export const usePusher = (roomId: string, username: string) => {
     // Присоединяемся к комнате через API
     const joinRoom = async () => {
       try {
+        console.log('🔗 Присоединяемся к комнате:', roomId, 'как пользователь:', username);
         const response = await fetch('/api/pusher', {
           method: 'POST',
           headers: {
@@ -74,8 +75,12 @@ export const usePusher = (roomId: string, username: string) => {
         });
 
         if (response.ok) {
+          const result = await response.json();
+          console.log('✅ Ответ от сервера:', result);
           setIsConnected(true);
           console.log('✅ Присоединились к комнате через Pusher');
+        } else {
+          console.error('❌ Ошибка ответа сервера:', response.status, response.statusText);
         }
       } catch (error) {
         console.error('❌ Ошибка присоединения к комнате:', error);
