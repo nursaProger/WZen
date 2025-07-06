@@ -1,8 +1,15 @@
 const { Server } = require('socket.io');
 
-// Хранилище комнат (в памяти - будет сбрасываться при перезапуске)
-const rooms = new Map();
-const roomTimeouts = new Map();
+// Глобальное хранилище для всех экземпляров
+if (!global.rooms) {
+  global.rooms = new Map();
+}
+if (!global.roomTimeouts) {
+  global.roomTimeouts = new Map();
+}
+
+const rooms = global.rooms;
+const roomTimeouts = global.roomTimeouts;
 
 // Функция для планирования удаления комнаты
 const scheduleRoomDeletion = (roomId) => {
@@ -23,14 +30,22 @@ const scheduleRoomDeletion = (roomId) => {
 };
 
 module.exports = (req, res) => {
+  // Проверяем, что это WebSocket upgrade запрос
+  if (req.headers.upgrade !== 'websocket') {
+    res.status(400).json({ error: 'WebSocket upgrade required' });
+    return;
+  }
+
   if (!res.socket.server.io) {
     console.log('Инициализация Socket.IO...');
     
     const io = new Server(res.socket.server, {
       cors: {
         origin: "*",
-        methods: ["GET", "POST"]
-      }
+        methods: ["GET", "POST"],
+        credentials: true
+      },
+      transports: ['websocket', 'polling']
     });
     
     res.socket.server.io = io;

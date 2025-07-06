@@ -103,7 +103,9 @@ const Room: React.FC = () => {
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000
+      reconnectionDelayMax: 5000,
+      transports: ['websocket', 'polling'],
+      forceNew: true
     });
     setSocket(newSocket);
 
