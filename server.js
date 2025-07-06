@@ -14,7 +14,7 @@ const io = socketIo(server, {
   }
 });
 
-const PORT = 3005;
+const PORT = process.env.PORT || 3005;
 
 app.use(cors());
 app.use(express.json());
@@ -383,7 +383,13 @@ app.post('/parse-rezka', async (req, res) => {
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`WZen server running on http://localhost:${PORT}`);
-  console.log(`WebSocket server ready for real-time connections`);
-}); 
+// Для Vercel serverless
+if (process.env.NODE_ENV !== 'production') {
+  server.listen(PORT, () => {
+    console.log(`WZen server running on http://localhost:${PORT}`);
+    console.log(`WebSocket server ready for real-time connections`);
+  });
+}
+
+// Экспортируем для Vercel
+module.exports = app; 

@@ -95,7 +95,10 @@ const Room: React.FC = () => {
     }
 
     // Подключаемся к WebSocket серверу
-    const newSocket = io('http://localhost:3005', {
+    const socketUrl = process.env.NODE_ENV === 'production' 
+      ? window.location.origin 
+      : 'http://localhost:3005';
+    const newSocket = io(socketUrl, {
       timeout: 10000,
       reconnection: true,
       reconnectionAttempts: 10,
