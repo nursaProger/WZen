@@ -20,7 +20,6 @@ const RoomPusher: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [messages, setMessages] = useState<Message[]>([]);
   const lastSyncRef = useRef<number>(0);
   const userInteractionRef = useRef<boolean>(false);
   const userInteractionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -44,6 +43,7 @@ const RoomPusher: React.FC = () => {
   const {
     isConnected,
     users,
+    messages,
     sendMessage,
     sendVideoSync
   } = usePusher(roomId || '', username);
@@ -201,7 +201,6 @@ const RoomPusher: React.FC = () => {
             onTimeUpdate={handleTimeUpdate}
             onDurationChange={handleDurationChange}
             onSeek={handleSeek}
-            onUserInteraction={handleUserInteraction}
           />
         </div>
         
