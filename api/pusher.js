@@ -90,6 +90,9 @@ module.exports = (req, res) => {
         const user = { id: Date.now().toString(), username };
         room.users.push(user);
         
+        console.log('📤 Отправляем данные комнаты пользователю:', username);
+        console.log('📤 Пользователей в комнате:', room.users.length);
+        
         // Отправляем данные комнаты новому пользователю
         pusher.trigger(`room-${roomId}`, 'room-data', {
           users: room.users,
@@ -101,7 +104,10 @@ module.exports = (req, res) => {
         });
 
         // Уведомляем всех о новом пользователе
+        console.log('📤 Отправляем событие user-joined для пользователя:', user.username);
         pusher.trigger(`room-${roomId}`, 'user-joined', user);
+        
+        console.log('📤 Отправляем обновление списка пользователей');
         pusher.trigger(`room-${roomId}`, 'users-updated', room.users);
         
         // Отправляем системное сообщение

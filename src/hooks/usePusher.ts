@@ -47,6 +47,7 @@ export const usePusher = (roomId: string, username: string) => {
     if (!roomId || !username) return;
 
     // Инициализируем Pusher
+    console.log('🔌 Инициализация Pusher с ключом:', process.env.REACT_APP_PUSHER_KEY || '9552c3255ea1afa7cf5c');
     const pusher = new Pusher(process.env.REACT_APP_PUSHER_KEY || '9552c3255ea1afa7cf5c', {
       cluster: process.env.REACT_APP_PUSHER_CLUSTER || 'ap2',
       forceTLS: true
@@ -55,8 +56,18 @@ export const usePusher = (roomId: string, username: string) => {
     pusherRef.current = pusher;
 
     // Подписываемся на канал комнаты
+    console.log('📡 Подписываемся на канал:', `room-${roomId}`);
     const channel = pusher.subscribe(`room-${roomId}`);
     channelRef.current = channel;
+    
+    // Логируем события подключения
+    pusher.connection.bind('connected', () => {
+      console.log('✅ Pusher подключен');
+    });
+    
+    pusher.connection.bind('error', (err: any) => {
+      console.error('❌ Ошибка подключения Pusher:', err);
+    });
 
     // Присоединяемся к комнате через API
     const joinRoom = async () => {
@@ -92,6 +103,8 @@ export const usePusher = (roomId: string, username: string) => {
     // Слушаем события
     channel.bind('room-data', (data: PusherRoomData) => {
       console.log('📋 Получены данные комнаты:', data);
+      console.log('👥 Пользователей в комнате:', data.users.length);
+      console.log('🎬 URL видео:', data.videoUrl);
       setUsers(data.users);
       setVideoUrl(data.videoUrl);
       setIsPlaying(data.isPlaying);
@@ -110,6 +123,7 @@ export const usePusher = (roomId: string, username: string) => {
 
     channel.bind('users-updated', (updatedUsers: PusherUser[]) => {
       console.log('👥 Обновлен список пользователей:', updatedUsers);
+      console.log('👥 Количество пользователей:', updatedUsers.length);
       setUsers(updatedUsers);
     });
 
