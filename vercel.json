@@ -15,10 +15,6 @@
       "dest": "/api/socket.js"
     },
     {
-      "src": "/room/(.*)",
-      "dest": "/dist/index.html"
-    },
-    {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot))",
       "dest": "/dist/$1"
     },
