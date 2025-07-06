@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/socket",
-      "destination": "/api/socket.js"
+      "source": "/api/pusher",
+      "destination": "/api/pusher.js"
     },
     {
       "source": "/(.*)",
