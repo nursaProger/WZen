@@ -173,6 +173,29 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return videoExtensions.some(ext => url.toLowerCase().includes(ext));
   };
 
+  // Проверяем доступность видео URL
+  const checkVideoAvailability = async (url: string): Promise<boolean> => {
+    try {
+      console.log('🔍 Проверяем доступность URL:', url);
+      
+      // Для прямых видео файлов используем HEAD запрос
+      if (isDirectVideo(url)) {
+        const response = await fetch(url, { 
+          method: 'HEAD',
+          mode: 'cors'
+        });
+        console.log('✅ Видео файл доступен:', response.status);
+        return response.ok;
+      }
+      
+      // Для стриминговых сервисов просто проверяем, что URL валидный
+      return true;
+    } catch (error) {
+      console.log('❌ Ошибка проверки доступности:', error.message);
+      return false;
+    }
+  };
+
   // Получаем правильный URL для отображения
   const getDisplayUrl = async (url: string) => {
     console.log('Обрабатываем URL:', url);
@@ -188,6 +211,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         fixedUrl = 'https://' + url;
       }
       console.log('🔧 Исправлен URL:', fixedUrl);
+    }
+    
+    // Проверяем доступность URL
+    const isAvailable = await checkVideoAvailability(fixedUrl);
+    if (!isAvailable) {
+      throw new Error('Видео недоступно или заблокировано CORS политикой');
     }
     
     if (fixedUrl.includes('youtube.com') || fixedUrl.includes('youtu.be')) {
@@ -229,6 +258,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       console.log('🎬 Текущее состояние:', { isPlaying, currentTime, duration });
       console.log('🎬 isIframe:', isIframe, 'displayUrl:', displayUrl);
       console.log('🎬 Проверяем тип URL...');
+      console.log('🎬 isStreamingService:', isStreamingService(url));
+      console.log('🎬 isDirectVideo:', isDirectVideo(url));
       
       // Сбрасываем индекс Rutube URL при смене URL
       if (url.includes('rutube.ru') || url.includes('rutube.com')) {
@@ -236,20 +267,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         console.log('🔄 Сброшен индекс Rutube URL');
       }
       
-      // Проверяем доступность URL
-      if (url.startsWith('http')) {
-        console.log('🎬 URL начинается с http - проверяем доступность...');
-        fetch(url, { method: 'HEAD', mode: 'no-cors' })
-          .then(() => console.log('🎬 URL доступен (HEAD запрос)'))
-          .catch(() => console.log('🎬 URL недоступен (HEAD запрос)'));
-      }
-      
       setError(null);
       setIsLoading(true);
       
-      // Таймаут для загрузки видео (15 секунд для iframe, 20 секунд для видео)
+      // Таймаут для загрузки видео (10 секунд для iframe, 20 секунд для видео)
       const isStreaming = isStreamingService(url);
-      const timeoutDuration = isStreaming ? 15000 : 20000;
+      const timeoutDuration = isStreaming ? 10000 : 20000; // Уменьшаем таймаут для iframe
+      
+      console.log('⏰ Устанавливаем таймаут загрузки:', timeoutDuration, 'мс');
       
       const loadingTimeout = setTimeout(() => {
         console.log('⏰ Таймаут загрузки видео');
@@ -259,7 +284,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             // Не показываем ошибку для Rutube, только кнопки
             setError(null);
           } else {
-            setError('Стриминговый сервис не загрузился. Попробуйте другой URL или проверьте доступность сервиса.');
+            setError('Стриминговый сервис заблокирован для встраивания. Нажмите кнопку ниже, чтобы открыть видео в новом окне.');
           }
         } else {
           setError('Видео не загрузилось. Проверьте URL и попробуйте снова.');
@@ -283,7 +308,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           console.log('🎬 Установлен displayUrl для iframe:', newDisplayUrl);
         }).catch(error => {
           console.error('❌ Ошибка получения displayUrl:', error);
+          
+          // Если это CORS ошибка для прямого видео, предлагаем альтернативы
+          if (isDirectVideo(url) && error.message.includes('CORS')) {
+            setError('Видео заблокировано CORS политикой. Загрузите видео на YouTube, Vimeo или другой стриминговый сервис.');
+          } else {
+            setError(error.message || 'Ошибка обработки URL. Попробуйте другой источник.');
+          }
+          
           setDisplayUrl(url); // Fallback к оригинальному URL
+          setIsLoading(false);
         });
       }
       
@@ -482,52 +516,53 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       let errorMessage = 'Ошибка загрузки видео. ';
       switch (video.error.code) {
         case 1:
-          errorMessage += 'Видео заблокировано или недоступно.';
+          errorMessage += 'Видео заблокировано CORS политикой или недоступно. Попробуйте другой URL.';
           break;
         case 2:
-          errorMessage += 'Сетевая ошибка. Проверьте подключение к интернету.';
+          errorMessage += 'Сетевая ошибка. Проверьте подключение к интернету и доступность видео.';
           break;
         case 3:
-          errorMessage += 'Видео повреждено или имеет неподдерживаемый формат.';
+          errorMessage += 'Видео повреждено или имеет неподдерживаемый формат. Попробуйте другой файл.';
           break;
         case 4:
-          errorMessage += 'Видео не может быть воспроизведено.';
+          errorMessage += 'Видео не может быть воспроизведено в этом браузере.';
           break;
         default:
-          errorMessage += 'Проверьте URL и попробуйте снова.';
+          errorMessage += 'Проверьте URL и попробуйте снова. Возможно, видео заблокировано CORS политикой.';
       }
       setError(errorMessage);
     } else {
-      setError('Ошибка загрузки видео. Проверьте URL и попробуйте снова.');
+      // Проверяем, может ли это быть CORS ошибка
+      const videoElement = e.target as HTMLVideoElement;
+      if (videoElement.src && videoElement.src !== displayUrl) {
+        setError('CORS ошибка: видео заблокировано политикой безопасности браузера. Попробуйте стриминговый сервис.');
+      } else {
+        setError('Ошибка загрузки видео. Проверьте URL и попробуйте снова.');
+      }
     }
     setIsLoading(false);
   };
 
   const handleIframeLoad = () => {
-    console.log('Iframe загружен');
+    console.log('✅ Iframe загружен успешно');
     setIsLoading(false);
+    setError(null);
     
-    // Проверяем, не заблокирован ли iframe
+    // Проверяем, не заблокирован ли iframe через некоторое время
     setTimeout(() => {
       if (iframeRef.current) {
         try {
-          // Попробуем получить доступ к содержимому iframe
           const iframe = iframeRef.current;
+          // Попробуем получить доступ к содержимому iframe
           if (iframe.contentWindow && iframe.contentWindow.location.href) {
-            console.log('Iframe успешно загружен');
+            console.log('✅ Iframe полностью загружен и доступен');
           }
         } catch (error) {
-          console.log('Iframe заблокирован политикой безопасности');
-          
-          // Специальная обработка для Rutube
-          if (url.includes('rutube.ru') || url.includes('rutube.com')) {
-            setError('Видео заблокировано для встраивания. Попробуйте другие методы.');
-          } else {
-            setError('Видео заблокировано для встраивания. Попробуйте другой URL.');
-          }
+          console.log('⚠️ Iframe заблокирован политикой безопасности, но это нормально для некоторых сервисов');
+          // Не показываем ошибку, так как iframe может работать даже при блокировке доступа
         }
       }
-    }, 2000);
+    }, 3000);
   };
 
   const handleIframeError = () => {
@@ -546,7 +581,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         setError('Все методы встраивания исчерпаны. Попробуйте открыть видео в новом окне.');
       }
     } else {
-      setError('Стриминговый сервис не загрузился. Попробуйте другой URL или проверьте доступность сервиса.');
+      // Для других сервисов сразу предлагаем открыть в новом окне
+      setError('Стриминговый сервис заблокирован для встраивания. Нажмите кнопку ниже, чтобы открыть видео в новом окне.');
     }
     
     setIsLoading(false);
@@ -651,6 +687,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="loading-overlay">
             <div className="loading-spinner"></div>
             <p>Загрузка видео...</p>
+            {isStreamingService(url) && (
+              <p style={{fontSize: '0.8rem', marginTop: '8px', color: 'rgba(255, 255, 255, 0.8)'}}>
+                Стриминговый сервис может загружаться медленно
+              </p>
+            )}
           </div>
         )}
         
@@ -658,12 +699,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="error-overlay">
             <div className="error-message">
               <p>❌ {error}</p>
+              {isDirectVideo(url) && (
+                <div style={{ marginBottom: '16px', fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.8)' }}>
+                  💡 <strong>Совет:</strong> Прямые видео файлы часто блокируются CORS политикой. 
+                  Попробуйте загрузить видео на YouTube, Vimeo или другой стриминговый сервис.
+                </div>
+              )}
+              {isStreamingService(url) && (
+                <div style={{ marginBottom: '16px', fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.8)' }}>
+                  💡 <strong>Совет:</strong> Стриминговые сервисы часто блокируют встраивание из-за политик безопасности. 
+                  Нажмите кнопку ниже, чтобы смотреть видео в новом окне.
+                </div>
+              )}
               <button 
                 onClick={() => setShowUrlInput(true)}
                 className="btn"
               >
                 🔗 Попробовать другой URL
               </button>
+              {(isDirectVideo(url) || isStreamingService(url)) && (
+                <button 
+                  onClick={() => window.open(url, '_blank')}
+                  className="btn"
+                  style={{ marginLeft: '8px', background: '#28a745' }}
+                >
+                  🎬 Открыть видео в новом окне
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -740,9 +802,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             src={displayUrl}
             className="video-element iframe-video"
             allowFullScreen
-            allow="autoplay; encrypted-media"
+            allow="autoplay; encrypted-media; fullscreen"
             onLoad={handleIframeLoad}
             onError={handleIframeError}
+            style={{ 
+              border: 'none',
+              width: '100%',
+              height: '100%',
+              minHeight: '400px'
+            }}
+            sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox"
           />
         ) : (
           <video
@@ -767,6 +836,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             }}
             className="video-element"
             style={{ display: displayUrl ? 'block' : 'none' }}
+            controls={false}
+            preload="metadata"
+            crossOrigin="anonymous"
+            playsInline
+            muted={false}
           />
         )}
         
@@ -781,6 +855,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <div className="loading-spinner"></div>
             <p>Загрузка видео...</p>
             <p style={{fontSize: '0.8rem', marginTop: '8px'}}>URL: {displayUrl}</p>
+            {isStreamingService(url) && (
+              <p style={{fontSize: '0.8rem', marginTop: '4px', color: 'rgba(255, 255, 255, 0.8)'}}>
+                Стриминговый сервис - загрузка может занять время
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -831,6 +910,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           >
             🔗
           </button>
+          
+          {isStreamingService(url) && (
+            <button
+              onClick={() => window.open(url, '_blank')}
+              className="control-btn"
+              title="Открыть видео в новом окне"
+              style={{ background: '#28a745' }}
+            >
+              🎬
+            </button>
+          )}
         </div>
         
         <input

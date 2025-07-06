@@ -321,22 +321,28 @@ const Room: React.FC = () => {
       <div className="room-header">
         <div className="room-info">
           <h2>🎬 WZen - Комната: {roomId}</h2>
-          <p>Пользователь: {username}</p>
+          <p>👤 Пользователь: {username}</p>
           <div className="connection-status">
             <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`}>
               {isConnected ? '●' : '○'}
             </span>
             <span>{isConnected ? 'Подключено' : 'Отключено'}</span>
+            {isConnected && <span style={{marginLeft: '8px', fontSize: '0.8rem', opacity: 0.7}}>• Синхронизация активна</span>}
           </div>
         </div>
         <div className="room-users">
-          <span>👥 {users.length} пользователей</span>
+          <span>👥 {users.length} {users.length === 1 ? 'пользователь' : users.length < 5 ? 'пользователя' : 'пользователей'}</span>
+          {users.length > 0 && (
+            <span style={{fontSize: '0.8rem', opacity: 0.7}}>
+              • {users.map(u => u.username).join(', ')}
+            </span>
+          )}
         </div>
         <button 
           onClick={() => navigate('/create')} 
           className="btn btn-secondary"
         >
-          Покинуть комнату
+          🚪 Покинуть комнату
         </button>
       </div>
 
