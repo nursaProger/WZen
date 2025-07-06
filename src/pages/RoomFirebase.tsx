@@ -20,7 +20,6 @@ const RoomFirebase: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [messages, setMessages] = useState<Message[]>([]);
   const lastSyncRef = useRef<number>(0);
   const userInteractionRef = useRef<boolean>(false);
   const userInteractionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -44,6 +43,7 @@ const RoomFirebase: React.FC = () => {
   const {
     isConnected,
     users,
+    messages,
     sendMessage,
     sendVideoSync
   } = useFirebase(roomId || '', username);
@@ -206,7 +206,7 @@ const RoomFirebase: React.FC = () => {
         
         <div className="chat-section">
           <Chat
-            messages={messages}
+            messages={messages as Message[]}
             onSendMessage={handleSendMessage}
             username={username}
           />
